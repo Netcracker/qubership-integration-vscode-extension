@@ -17,4 +17,3 @@ This section provides a general description of testing strategies, tools, and ap
 ## Debug
 
 This section provides an overview of debugging approaches and tools relevant to the project.
-
