@@ -27,6 +27,7 @@ import {
 import {
     getApiSpecifications,
     getContextService,
+    getContextServices,
     getEnvironments,
     getOperationInfo,
     getOperations,
@@ -124,6 +125,7 @@ export async function getApiResponse(message: VSCodeMessage<any>, openedDocument
 
         // Context service operations
         case 'getContextService': return await getContextService(fileUri, message.payload);
+        case 'getContextServices': return await getContextServices(fileUri);
         case 'updateContextService': return await updateContextService(fileUri, message.payload.id, message.payload.service);
 
         // Service operations
@@ -191,7 +193,6 @@ export async function getNavigateUri(fileUri: vscode.Uri): Promise<string> {
 }
 
 export const SERVICE_ROUTES: RegExp[] = [
-  /^\/services\/context\/[^/]+\/parameters$/,
   /^\/services\/systems\/[^/]+\/parameters$/,
   /^\/services\/systems\/[^/]+\/specificationGroups$/,
   /^\/services\/systems\/[^/]+\/specificationGroups\/[^/]+\/specifications$/,
@@ -199,6 +200,10 @@ export const SERVICE_ROUTES: RegExp[] = [
   /^\/services\/systems\/[^/]+\/environments$/,
   /^\/services\/systems\/[^/]+\/specificationGroups\/[^/]+\/specifications\/[^/]+\/operations$/,
   /^\/services\/systems\/[^/]+\/specificationGroups\/[^/]+\/specifications\/[^/]+\/operations\/[^/]+$/
+];
+
+export const CONTEXT_SERVICE_ROUTES: RegExp[] = [
+    /^\/services\/context\/[^/]+\/parameters$/,
 ];
 
 export const CHAIN_ROUTES: RegExp[] = [/^\/chains\/[^/]+\/graph$/];
