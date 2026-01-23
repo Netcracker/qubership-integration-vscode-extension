@@ -724,7 +724,7 @@ function getWebviewContent(context: ExtensionContext, webview: Webview) {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>QIP Offline Chain Editor</title>
         <link href="${cssUri}" rel="stylesheet">
-		<script type="module" crossorigin src="${jsUri}"></script>
+	    <script type="module" crossorigin src="${jsUri}"></script>
         <style>
           html, body {
             margin: 0 !important;
