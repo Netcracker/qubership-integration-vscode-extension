@@ -229,7 +229,9 @@ export class QipExplorerProvider implements vscode.TreeDataProvider<QipExplorerI
               const serviceType =
                 serviceData.content?.integrationSystemType ||
                 (name.endsWith(ext.contextService) ? "CONTEXT" : "Unknown");
-              const label = `${displayName}${serviceType === "CONTEXT" ? "" : "-" + protocol}-${serviceData.id}`;
+              const label = `${displayName}${
+                serviceType === "CONTEXT" ? "" : `-${protocol}`
+              }-${serviceData.id}`;
 
               // Choose icon based on service type
               let iconName = "server";
