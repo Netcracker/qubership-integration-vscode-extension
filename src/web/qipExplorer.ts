@@ -34,7 +34,10 @@ export class QipExplorerProvider implements vscode.TreeDataProvider<QipExplorerI
   }
 
   getTreeItem(element: QipExplorerItem): vscode.TreeItem {
-    const treeItem = new vscode.TreeItem(element.label, element.collapsibleState);
+    const treeItem = new vscode.TreeItem(
+      element.label,
+      element.collapsibleState
+    );
 
     treeItem.description = element.description;
     treeItem.iconPath = element.iconPath;
