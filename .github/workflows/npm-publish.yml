@@ -132,9 +132,10 @@ jobs:
       update-nc-dependency: ${{ github.event_name == 'workflow_dispatch' && inputs.update-nc-dependency || false }}
       dist-tag: ${{(github.event_name == 'workflow_dispatch' && inputs.npm-dist-tag != '' && inputs.npm-dist-tag) || 'latest' }}
       ref: ${{ github.ref_name }}
+      dry-run: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
 
   create-release:
-    if: ${{ github.event.inputs.create-github-release == 'true' }}
+    if: inputs.create-github-release == 'true' && github.event_name != 'pull_request'
     needs: npm-publish
     runs-on: ubuntu-latest
     permissions:
