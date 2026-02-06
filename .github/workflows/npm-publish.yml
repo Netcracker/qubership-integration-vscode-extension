@@ -10,6 +10,8 @@ name: Publish NPM package
 run-name: NPM Package${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch')) && ' - Test' || ' - Publish' }}${{ (github.event_name == 'workflow_dispatch' && inputs.version) && format(' {0}', inputs.version) || '' }}
 
 on:
+  pull_request:
+    types: [ opened, synchronize, reopened ]
   workflow_dispatch:
     inputs:
       version:
@@ -129,10 +131,10 @@ jobs:
       scope: ${{ github.event_name == 'workflow_dispatch' && inputs.scope || '@netcracker' }}
       node-version: ${{ github.event_name == 'workflow_dispatch' && inputs.node-version || '22.x' }}
       registry-url: ${{ github.event_name == 'workflow_dispatch' && inputs.registry-url || 'https://npm.pkg.github.com' }}
-      update-nc-dependency: ${{ github.event_name == 'workflow_dispatch' && inputs.update-nc-dependency || false }}
-      dist-tag: ${{(github.event_name == 'workflow_dispatch' && inputs.npm-dist-tag != '' && inputs.npm-dist-tag) || 'latest' }}
-      ref: ${{ github.ref_name }}
-      dry-run: ${{ github.event_name == 'pull_request' && 'true' || 'false' }}
+      update-nc-dependency: ${{ inputs.update-nc-dependency }}
+      dist-tag: ${{ inputs.npm-dist-tag || 'latest' }}
+      ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+      dry-run: ${{ github.event_name == 'pull_request' }}
 
   create-release:
     if: inputs.create-github-release == 'true' && github.event_name != 'pull_request'
