@@ -137,7 +137,7 @@ jobs:
       dry-run: ${{ github.event_name == 'pull_request' }}
 
   create-release:
-    if: inputs.create-github-release == 'true' && github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.create-github-release == 'true'
     needs: npm-publish
     runs-on: ubuntu-latest
     permissions:
