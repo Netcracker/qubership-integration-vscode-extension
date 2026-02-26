@@ -366,8 +366,8 @@ async function parseElementsForType(
     )) {
       const parsedElement = await parseElement(fileUri, element, chainId);
       result.push({ ...parsedElement, chainName });
-      if (type !== 'reuse') {
-          result.push(...getParsedElementChildren(parsedElement.children));
+      if (type !== "reuse") {
+        result.push(...getParsedElementChildren(parsedElement.children));
       }
     }
   }
