@@ -360,25 +360,23 @@ async function parseElementsForType(
 ): Promise<Element[]> {
   const result: Element[] = [];
 
-  if (!elements?.length) {
-    return result;
-  }
+  if (elements && elements.length) {
+    for (const element of elements) {
+      if (String(element.type) === type) {
+        const parsedElement = await parseElement(fileUri, element, chainId);
+        result.push({ ...parsedElement, chainName });
+      }
 
-  for (const element of elements) {
-    if (String(element.type) === type) {
-      const parsedElement = await parseElement(fileUri, element, chainId);
-      result.push({ ...parsedElement, chainName });
-    }
-
-    if (element?.children) {
-      const nested = await parseElementsForType(
-        fileUri,
-        element.children as ElementSchema[],
-        chainId,
-        type,
-        chainName,
-      );
-      result.push(...nested);
+      if (element?.children) {
+        const nested = await parseElementsForType(
+          fileUri,
+          element.children as ElementSchema[],
+          chainId,
+          type,
+          chainName,
+        );
+        result.push(...nested);
+      }
     }
   }
   return result;
