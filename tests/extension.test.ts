@@ -1,10 +1,8 @@
 import {
   createVscodeMock,
-  stubLabelUtils,
   stubProjectConfigService,
   buildMockContext,
 } from "./helpers/mocks";
-
 
 let capturedEditorProviders: Record<string, any> = {};
 let onDidReceiveMessageCallback: Function | null = null;
@@ -27,40 +25,45 @@ const mockPanel = {
   onDidDispose: jest.fn(() => ({ dispose: jest.fn() })),
 };
 
-
-jest.mock("vscode", () => {
-  const base = createVscodeMock();
-  return {
-    ...base,
-    window: {
-      ...base.window,
-      registerCustomEditorProvider: jest.fn((id: string, provider: any) => {
-        capturedEditorProviders[id] = provider;
-        return { dispose: jest.fn() };
-      }),
-      createWebviewPanel: jest.fn(() => mockPanel),
-    },
-    commands: {
-      registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
-      executeCommand: jest.fn(),
-    },
-    workspace: {
-      ...base.workspace,
-      fs: {
-        ...base.workspace.fs,
-        stat: jest.fn(() =>
-          mockStatBehavior === "resolve"
-            ? Promise.resolve({ type: 1 })
-            : Promise.reject(new Error("File not found")),
-        ),
+jest.mock(
+  "vscode",
+  () => {
+    const base = createVscodeMock();
+    return {
+      ...base,
+      window: {
+        ...base.window,
+        registerCustomEditorProvider: jest.fn((id: string, provider: any) => {
+          capturedEditorProviders[id] = provider;
+          return { dispose: jest.fn() };
+        }),
+        createWebviewPanel: jest.fn(() => mockPanel),
       },
-    },
-  };
-}, { virtual: true });
+      commands: {
+        registerCommand: jest.fn(() => ({ dispose: jest.fn() })),
+        executeCommand: jest.fn(),
+      },
+      workspace: {
+        ...base.workspace,
+        fs: {
+          ...base.workspace.fs,
+          stat: jest.fn(() =>
+            mockStatBehavior === "resolve"
+              ? Promise.resolve({ type: 1 })
+              : Promise.reject(new Error("File not found")),
+          ),
+        },
+      },
+    };
+  },
+  { virtual: true },
+);
 
 const mockGetApiResponse = jest.fn();
 
-jest.mock("../src/web/response", () => ({ getApiResponse: mockGetApiResponse }));
+jest.mock("../src/web/response", () => ({
+  getApiResponse: mockGetApiResponse,
+}));
 jest.mock("../src/web/response/file", () => ({ setFileApi: jest.fn() }));
 jest.mock("../src/web/response/file/fileApiImpl", () => ({
   VSCodeFileApi: jest.fn().mockImplementation(() => ({
@@ -94,9 +97,13 @@ jest.mock("../src/web/qipExplorer", () => ({
 }));
 jest.mock("@netcracker/qip-ui", () => ({}), { virtual: true });
 jest.mock("../src/web/services/FileCacheService", () => ({
-  FileCacheService: { getInstance: jest.fn().mockReturnValue({ invalidateByUri: jest.fn() }) },
+  FileCacheService: {
+    getInstance: jest.fn().mockReturnValue({ invalidateByUri: jest.fn() }),
+  },
 }));
-jest.mock("../src/web/services/ProjectConfigService", () => stubProjectConfigService());
+jest.mock("../src/web/services/ProjectConfigService", () =>
+  stubProjectConfigService(),
+);
 jest.mock("../src/web/services/ConfigApiProvider", () => ({
   ConfigApiProvider: { getInstance: jest.fn().mockReturnValue({}) },
 }));
@@ -106,7 +113,6 @@ jest.mock("../src/web/response/navigationUtils", () => ({
   initNavigationState: jest.fn(),
   updateNavigationStateValue: jest.fn(),
 }));
-
 
 import { activate } from "../src/web/extension";
 
@@ -119,10 +125,13 @@ const validDocument = { uri: { path: "/test.yaml", fsPath: "/test.yaml" } };
 
 async function openEditorAndGetMessageHandler() {
   const provider = activateAndGetProvider();
-  await provider.resolveCustomTextEditor(validDocument as any, mockPanel as any, {} as any);
+  await provider.resolveCustomTextEditor(
+    validDocument as any,
+    mockPanel as any,
+    {} as any,
+  );
   return onDidReceiveMessageCallback!;
 }
-
 
 describe("extension.ts", () => {
   beforeEach(() => {
@@ -133,26 +142,34 @@ describe("extension.ts", () => {
     mockWebview.html = "";
   });
 
-
-  describe("resolveCustomTextEditor – rejects invalid parameters", () => {
+  describe("resolveCustomTextEditor - rejects invalid parameters", () => {
     let provider: any;
-    beforeEach(() => { provider = activateAndGetProvider(); });
+    beforeEach(() => {
+      provider = activateAndGetProvider();
+    });
 
     test("throws when document.uri is falsy", async () => {
       await expect(
-        provider.resolveCustomTextEditor({ uri: null } as any, mockPanel as any, {} as any),
+        provider.resolveCustomTextEditor(
+          { uri: null } as any,
+          mockPanel as any,
+          {} as any,
+        ),
       ).rejects.toThrow("Invalid parameters for resolveCustomTextEditor");
     });
 
     test("throws when panel is null", async () => {
       await expect(
-        provider.resolveCustomTextEditor(validDocument as any, null as any, {} as any),
+        provider.resolveCustomTextEditor(
+          validDocument as any,
+          null as any,
+          {} as any,
+        ),
       ).rejects.toThrow("Invalid parameters for resolveCustomTextEditor");
     });
   });
 
-
-  describe("enrichWebview – onDidReceiveMessage error handling", () => {
+  describe("enrichWebview - onDidReceiveMessage error handling", () => {
     let handleMessage: Function;
 
     beforeEach(async () => {
@@ -193,13 +210,16 @@ describe("extension.ts", () => {
     });
   });
 
-
-  describe("getWebviewContent – importMapScript", () => {
+  describe("getWebviewContent - importMapScript", () => {
     test("omits importmap when bundled JS file exists", async () => {
       mockStatBehavior = "resolve";
       const provider = activateAndGetProvider();
 
-      await provider.resolveCustomTextEditor(validDocument as any, mockPanel as any, {} as any);
+      await provider.resolveCustomTextEditor(
+        validDocument as any,
+        mockPanel as any,
+        {} as any,
+      );
 
       expect(mockWebview.html).toContain("<!DOCTYPE html>");
       expect(mockWebview.html).not.toContain("importmap");
@@ -209,7 +229,11 @@ describe("extension.ts", () => {
       mockStatBehavior = "reject";
       const provider = activateAndGetProvider();
 
-      await provider.resolveCustomTextEditor(validDocument as any, mockPanel as any, {} as any);
+      await provider.resolveCustomTextEditor(
+        validDocument as any,
+        mockPanel as any,
+        {} as any,
+      );
 
       expect(mockWebview.html).toContain("importmap");
       expect(mockWebview.html).toContain("esm.sh/react@18.3.1");

@@ -6,7 +6,6 @@ import {
   buildServiceRecord,
 } from "../helpers/mocks";
 
-
 jest.mock("vscode", () => createVscodeMock(), { virtual: true });
 jest.mock("yaml", () => ({ stringify: jest.fn(), parse: jest.fn() }));
 jest.mock("../../src/web/response/file/fileApiProvider", () => stubFileApi());
@@ -16,12 +15,18 @@ jest.mock("../../src/web/response/serviceApiRead", () => ({
   getContextService: jest.fn(),
 }));
 jest.mock("../../src/web/response/file/fileExtensions", () => ({
-  getExtensionsForFile: jest.fn().mockReturnValue({ service: ".qip-service.yaml" }),
-  getExtensionsForUri: jest.fn().mockReturnValue({ service: ".qip-service.yaml" }),
+  getExtensionsForFile: jest
+    .fn()
+    .mockReturnValue({ service: ".qip-service.yaml" }),
+  getExtensionsForUri: jest
+    .fn()
+    .mockReturnValue({ service: ".qip-service.yaml" }),
 }));
 jest.mock("../../src/web/extension", () => ({ refreshQipExplorer: jest.fn() }));
 jest.mock("../../src/web/api-services/LabelUtils", () => stubLabelUtils());
-jest.mock("../../src/web/services/ProjectConfigService", () => stubProjectConfigService());
+jest.mock("../../src/web/services/ProjectConfigService", () =>
+  stubProjectConfigService(),
+);
 jest.mock("../../src/web/api-services/parsers/ContentParser", () => ({
   ContentParser: { parseContentFromFile: jest.fn() },
 }));
@@ -31,17 +36,23 @@ jest.mock("../../src/web/response/serviceApiUtils", () => {
   const actual = jest.requireActual("../../src/web/response/serviceApiUtils");
   return {
     ...actual,
-    validateAllowedSystemProtocol: jest.fn(actual.validateAllowedSystemProtocol),
+    validateAllowedSystemProtocol: jest.fn(
+      actual.validateAllowedSystemProtocol,
+    ),
   };
 });
 
-
-import { IntegrationSystemType, IntegrationSystem } from "../../src/web/api-services/servicesTypes";
+import {
+  IntegrationSystemType,
+  IntegrationSystem,
+} from "../../src/web/api-services/servicesTypes";
 import { ApiSpecificationType } from "../../src/web/api-services/importApiTypes";
 import { updateService } from "../../src/web/response/serviceApiModify";
-import { getMainService, getService } from "../../src/web/response/serviceApiRead";
+import {
+  getMainService,
+  getService,
+} from "../../src/web/response/serviceApiRead";
 import { validateAllowedSystemProtocol } from "../../src/web/response/serviceApiUtils";
-
 
 describe("updateService – validateAllowedSystemProtocol integration", () => {
   const serviceFileUri = {} as any;
@@ -53,7 +64,9 @@ describe("updateService – validateAllowedSystemProtocol integration", () => {
     (getMainService as jest.Mock).mockResolvedValue(
       buildServiceRecord(serviceId, { protocol: ApiSpecificationType.HTTP }),
     );
-    (getService as jest.Mock).mockResolvedValue({ id: serviceId } as IntegrationSystem);
+    (getService as jest.Mock).mockResolvedValue({
+      id: serviceId,
+    } as IntegrationSystem);
 
     await updateService(serviceFileUri, serviceId, {
       type: IntegrationSystemType.EXTERNAL,
@@ -74,12 +87,18 @@ describe("updateService – validateAllowedSystemProtocol integration", () => {
       updateService(serviceFileUri, serviceId, {
         type: IntegrationSystemType.IMPLEMENTED,
       } as Partial<IntegrationSystem>),
-    ).rejects.toThrow("Specification type is not allowed for implemented system: GRPC");
+    ).rejects.toThrow(
+      "Specification type is not allowed for implemented system: GRPC",
+    );
   });
 
   test("skips validation entirely when type is not provided", async () => {
-    (getMainService as jest.Mock).mockResolvedValue(buildServiceRecord(serviceId));
-    (getService as jest.Mock).mockResolvedValue({ id: serviceId } as IntegrationSystem);
+    (getMainService as jest.Mock).mockResolvedValue(
+      buildServiceRecord(serviceId),
+    );
+    (getService as jest.Mock).mockResolvedValue({
+      id: serviceId,
+    } as IntegrationSystem);
 
     await updateService(serviceFileUri, serviceId, {
       name: "Updated Name",

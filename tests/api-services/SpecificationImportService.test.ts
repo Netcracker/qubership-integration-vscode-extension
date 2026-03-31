@@ -7,7 +7,6 @@ import {
   buildSerializedOpenApiFile,
 } from "../helpers/mocks";
 
-
 const mockValidateAllowedSystemProtocol = jest.fn();
 const mockGetSystemById = jest.fn();
 const mockCreateSpecificationGroup = jest.fn();
@@ -15,9 +14,11 @@ const mockSaveSpecificationGroupFile = jest.fn();
 const mockGetSpecificationGroupById = jest.fn();
 const mockFailImportSession = jest.fn();
 
-
 jest.mock("vscode", () => createVscodeMock(), { virtual: true });
-jest.mock("yaml", () => ({ stringify: jest.fn().mockReturnValue(""), parse: jest.fn() }));
+jest.mock("yaml", () => ({
+  stringify: jest.fn().mockReturnValue(""),
+  parse: jest.fn(),
+}));
 jest.mock("../../src/web/response", () => ({
   validateAllowedSystemProtocol: mockValidateAllowedSystemProtocol,
 }));
@@ -25,7 +26,9 @@ jest.mock("../../src/web/response/file/fileApiProvider", () =>
   stubFileApi({ getFileType: jest.fn().mockResolvedValue("SERVICE") }),
 );
 jest.mock("../../src/web/api-services/LabelUtils", () => stubLabelUtils());
-jest.mock("../../src/web/services/ProjectConfigService", () => stubProjectConfigService());
+jest.mock("../../src/web/services/ProjectConfigService", () =>
+  stubProjectConfigService(),
+);
 
 jest.mock("../../src/web/api-services/SystemService", () => ({
   SystemService: jest.fn().mockImplementation(() => ({
@@ -76,7 +79,9 @@ jest.mock("../../src/web/api-services/pathUtils", () => ({
   normalizePath: jest.fn((p: string) => p),
 }));
 jest.mock("../../src/web/api-services/EnvironmentDefaultProperties", () => ({
-  EnvironmentDefaultProperties: { getDefaultProperties: jest.fn().mockReturnValue({}) },
+  EnvironmentDefaultProperties: {
+    getDefaultProperties: jest.fn().mockReturnValue({}),
+  },
 }));
 jest.mock("../../src/web/services/ProtocolDetectorService", () => ({
   ProtocolDetectorService: {
@@ -84,17 +89,17 @@ jest.mock("../../src/web/services/ProtocolDetectorService", () => ({
   },
 }));
 
-
 import { SpecificationImportService } from "../../src/web/api-services/SpecificationImportService";
 import { IntegrationSystemType } from "../../src/web/api-services/servicesTypes";
-
 
 describe("SpecificationImportService – validateAllowedSystemProtocol in runImport", () => {
   let service: SpecificationImportService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new SpecificationImportService({ path: "/fake/service.yaml" } as any);
+    service = new SpecificationImportService({
+      path: "/fake/service.yaml",
+    } as any);
   });
 
   test("calls validateAllowedSystemProtocol with system type and detected protocol", async () => {
@@ -128,7 +133,9 @@ describe("SpecificationImportService – validateAllowedSystemProtocol in runImp
       }),
     );
     mockValidateAllowedSystemProtocol.mockImplementation(() => {
-      throw new Error("Specification type is not allowed for implemented system: HTTP");
+      throw new Error(
+        "Specification type is not allowed for implemented system: HTTP",
+      );
     });
 
     const result = await service.importSpecificationGroup({

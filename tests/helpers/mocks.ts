@@ -40,7 +40,11 @@ export function createVscodeMock(overrides: Record<string, any> = {}) {
         dispose: jest.fn(),
       })),
       onDidChangeConfiguration: jest.fn(() => ({ dispose: jest.fn() })),
-      fs: { stat: jest.fn(), readDirectory: jest.fn().mockResolvedValue([]), delete: jest.fn() },
+      fs: {
+        stat: jest.fn(),
+        readDirectory: jest.fn().mockResolvedValue([]),
+        delete: jest.fn(),
+      },
       openTextDocument: jest.fn(),
     },
     commands: {
@@ -48,13 +52,17 @@ export function createVscodeMock(overrides: Record<string, any> = {}) {
       executeCommand: jest.fn(),
     },
     ViewColumn: { One: 1 },
-    ColorThemeKind: { Light: 1, Dark: 2, HighContrast: 3, HighContrastLight: 4 },
+    ColorThemeKind: {
+      Light: 1,
+      Dark: 2,
+      HighContrast: 3,
+      HighContrastLight: 4,
+    },
     FileType: { File: 1, Directory: 2 },
     version: "1.90.0",
     ...overrides,
   };
 }
-
 
 export function stubFileApi(extra: Record<string, any> = {}) {
   return {
@@ -84,12 +92,17 @@ export function stubLabelUtils() {
   };
 }
 
-export function stubProjectConfigService(configOverrides: Record<string, any> = {}) {
+export function stubProjectConfigService(
+  configOverrides: Record<string, any> = {},
+) {
   return {
     ProjectConfigService: {
       getConfig: jest.fn().mockReturnValue({
         schemaUrls: { service: "", specification: "", specificationGroup: "" },
-        extensions: { service: ".qip-service.yaml", specification: ".spec.yaml" },
+        extensions: {
+          service: ".qip-service.yaml",
+          specification: ".spec.yaml",
+        },
         ...configOverrides,
       }),
       getInstance: jest.fn().mockReturnValue({
@@ -97,7 +110,10 @@ export function stubProjectConfigService(configOverrides: Record<string, any> = 
         loadWorkspaceConfig: jest.fn().mockResolvedValue(undefined),
         getAllConfigs: jest.fn().mockReturnValue([]),
         buildDefaultConfig: jest.fn().mockReturnValue({
-          extensions: { chain: ".qip-chain.yaml", service: ".qip-service.yaml" },
+          extensions: {
+            chain: ".qip-chain.yaml",
+            service: ".qip-service.yaml",
+          },
         }),
       }),
     },
@@ -105,11 +121,12 @@ export function stubProjectConfigService(configOverrides: Record<string, any> = 
   };
 }
 
-
 import type { IntegrationSystem } from "../../src/web/api-services/servicesTypes";
 import { IntegrationSystemType } from "../../src/web/api-services/servicesTypes";
 
-export function buildSystem(overrides: Partial<IntegrationSystem> = {}): IntegrationSystem {
+export function buildSystem(
+  overrides: Partial<IntegrationSystem> = {},
+): IntegrationSystem {
   return {
     id: "sys-1",
     name: "Test System",
@@ -123,7 +140,10 @@ export function buildSystem(overrides: Partial<IntegrationSystem> = {}): Integra
   };
 }
 
-export function buildServiceRecord(id: string, contentOverrides: Record<string, any> = {}) {
+export function buildServiceRecord(
+  id: string,
+  contentOverrides: Record<string, any> = {},
+) {
   return {
     id,
     content: { protocol: "HTTP", ...contentOverrides },

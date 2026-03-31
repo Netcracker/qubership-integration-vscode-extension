@@ -1,9 +1,15 @@
 import { createMinimalVscodeMock } from "../helpers/mocks";
 
 jest.mock("vscode", () => createMinimalVscodeMock(), { virtual: true });
-jest.mock("../../src/web/response/file/fileApiProvider", () => ({ fileApi: {} }));
-jest.mock("../../src/web/response/serviceApiRead", () => ({ getCurrentServiceId: jest.fn() }));
-jest.mock("../../src/web/response/serviceApiModify", () => ({ createService: jest.fn() }));
+jest.mock("../../src/web/response/file/fileApiProvider", () => ({
+  fileApi: {},
+}));
+jest.mock("../../src/web/response/serviceApiRead", () => ({
+  getCurrentServiceId: jest.fn(),
+}));
+jest.mock("../../src/web/response/serviceApiModify", () => ({
+  createService: jest.fn(),
+}));
 jest.mock("../../src/web/api-services/SpecificationImportApiHandler", () => ({
   SpecificationImportApiHandler: jest.fn(),
 }));
@@ -30,11 +36,21 @@ describe("ALLOWED_PROTOCOL_MAP", () => {
   });
 
   test("IMPLEMENTED allows only HTTP, SOAP, GRAPHQL", () => {
-    const allowed = ALLOWED_PROTOCOL_MAP.get(IntegrationSystemType.IMPLEMENTED)!;
+    const allowed = ALLOWED_PROTOCOL_MAP.get(
+      IntegrationSystemType.IMPLEMENTED,
+    )!;
     expect(allowed).toBeDefined();
 
-    const expectedAllowed = [ApiSpecificationType.HTTP, ApiSpecificationType.SOAP, ApiSpecificationType.GRAPHQL];
-    const expectedBlocked = [ApiSpecificationType.GRPC, ApiSpecificationType.KAFKA, ApiSpecificationType.AMQP];
+    const expectedAllowed = [
+      ApiSpecificationType.HTTP,
+      ApiSpecificationType.SOAP,
+      ApiSpecificationType.GRAPHQL,
+    ];
+    const expectedBlocked = [
+      ApiSpecificationType.GRPC,
+      ApiSpecificationType.KAFKA,
+      ApiSpecificationType.AMQP,
+    ];
 
     expectedAllowed.forEach((p) => expect(allowed.has(p)).toBe(true));
     expectedBlocked.forEach((p) => expect(allowed.has(p)).toBe(false));
@@ -52,18 +68,38 @@ describe("validateAllowedSystemProtocol", () => {
       ["protocol is undefined", IntegrationSystemType.EXTERNAL, undefined],
       ["both are undefined", undefined, undefined],
     ])("%s", (_label, systemType, protocol) => {
-      expect(() => validateAllowedSystemProtocol(systemType, protocol)).not.toThrow();
+      expect(() =>
+        validateAllowedSystemProtocol(systemType, protocol),
+      ).not.toThrow();
     });
   });
 
   describe("does not throw for allowed combinations", () => {
     test.each([
-      ["EXTERNAL + HTTP", IntegrationSystemType.EXTERNAL, ApiSpecificationType.HTTP],
-      ["INTERNAL + KAFKA", IntegrationSystemType.INTERNAL, ApiSpecificationType.KAFKA],
-      ["IMPLEMENTED + SOAP", IntegrationSystemType.IMPLEMENTED, ApiSpecificationType.SOAP],
-      ["CONTEXT (not in map) + HTTP", IntegrationSystemType.CONTEXT, ApiSpecificationType.HTTP],
+      [
+        "EXTERNAL + HTTP",
+        IntegrationSystemType.EXTERNAL,
+        ApiSpecificationType.HTTP,
+      ],
+      [
+        "INTERNAL + KAFKA",
+        IntegrationSystemType.INTERNAL,
+        ApiSpecificationType.KAFKA,
+      ],
+      [
+        "IMPLEMENTED + SOAP",
+        IntegrationSystemType.IMPLEMENTED,
+        ApiSpecificationType.SOAP,
+      ],
+      [
+        "CONTEXT (not in map) + HTTP",
+        IntegrationSystemType.CONTEXT,
+        ApiSpecificationType.HTTP,
+      ],
     ])("%s", (_label, systemType, protocol) => {
-      expect(() => validateAllowedSystemProtocol(systemType, protocol)).not.toThrow();
+      expect(() =>
+        validateAllowedSystemProtocol(systemType, protocol),
+      ).not.toThrow();
     });
   });
 
@@ -74,8 +110,13 @@ describe("validateAllowedSystemProtocol", () => {
       [ApiSpecificationType.AMQP],
     ])("IMPLEMENTED + %s", (protocol) => {
       expect(() =>
-        validateAllowedSystemProtocol(IntegrationSystemType.IMPLEMENTED, protocol),
-      ).toThrow(`Specification type is not allowed for implemented system: ${protocol}`);
+        validateAllowedSystemProtocol(
+          IntegrationSystemType.IMPLEMENTED,
+          protocol,
+        ),
+      ).toThrow(
+        `Specification type is not allowed for implemented system: ${protocol}`,
+      );
     });
   });
 });
