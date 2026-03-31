@@ -903,7 +903,7 @@ async function getWebviewContent(context: ExtensionContext, webview: Webview) {
         <title>QIP Offline Chain Editor</title>
         <link href="${cssUri}" rel="stylesheet">
         ${importMapScript}
-	    <script type="module" crossorigin src="${jsUri}"></script>
+        <script type="module" crossorigin src="${jsUri}"></script>
         <style>
           html, body {
             margin: 0 !important;
