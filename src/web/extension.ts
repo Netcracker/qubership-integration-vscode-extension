@@ -232,13 +232,7 @@ class ChainFileEditorProvider implements CustomTextEditorProvider {
     panel: WebviewPanel,
     _token: CancellationToken,
   ): Promise<void> {
-    if (
-      !document ||
-      !document.uri ||
-      !panel ||
-      !this.context ||
-      !this.context.extensionUri
-    ) {
+    if (!document?.uri || !panel || !this.context?.extensionUri) {
       throw new Error("Invalid parameters for resolveCustomTextEditor");
     }
 
