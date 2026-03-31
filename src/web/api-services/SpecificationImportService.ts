@@ -161,8 +161,10 @@ export class SpecificationImportService {
         window.showErrorMessage(errorMessage);
         throw new Error(errorMessage);
       }
-      const systemType = params.system.integrationSystemType;
-      validateAllowedSystemProtocol(systemType, importingProtocol);
+      validateAllowedSystemProtocol(
+        params.system.integrationSystemType,
+        importingProtocol,
+      );
       const systemProtocol = this.convertToApiSpecificationType(
         params.system.protocol,
       );
