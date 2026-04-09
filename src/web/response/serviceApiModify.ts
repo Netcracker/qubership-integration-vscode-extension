@@ -73,11 +73,11 @@ export async function updateMcpService(
   if (serviceRequest.identifier !== undefined) {
     service.content.identifier = serviceRequest.identifier;
   }
-  
+
   if (serviceRequest.labels !== undefined) {
     service.content.labels = LabelUtils.fromEntityLabels(serviceRequest.labels);
   }
-  
+
   await writeMainService(serviceFileUri, service);
   const updatedService = await getMcpService(serviceFileUri, serviceId);
 

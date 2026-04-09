@@ -104,7 +104,9 @@ export async function getContextServices(
   }
 }
 
-export async function getMcpServices(serviceFileUri: Uri): Promise<MCPSystem[]> {
+export async function getMcpServices(
+  serviceFileUri: Uri,
+): Promise<MCPSystem[]> {
   const ext = getExtensionsForUri(serviceFileUri);
   if (serviceFileUri.path.endsWith(ext.mcpService)) {
     const service: any = await getMainService(serviceFileUri);
@@ -125,7 +127,10 @@ export async function getMcpServices(serviceFileUri: Uri): Promise<MCPSystem[]> 
   }
 }
 
-export async function getMcpService(serviceFileUri: Uri, serviceId: string): Promise<MCPSystem> {
+export async function getMcpService(
+  serviceFileUri: Uri,
+  serviceId: string,
+): Promise<MCPSystem> {
   const service = await fileApi.getMcpService(serviceFileUri, serviceId);
 
   return {
@@ -137,7 +142,6 @@ export async function getMcpService(serviceFileUri: Uri, serviceId: string): Pro
     labels: LabelUtils.toEntityLabels(service.content?.labels || []),
   };
 }
-
 
 export async function getEnvironment(
   serviceFileUri: Uri,
