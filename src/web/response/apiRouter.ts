@@ -32,6 +32,8 @@ import {
   getEnvironment,
   getEnvironments,
   getLatestApiSpecification,
+  getMcpService,
+  getMcpServices,
   getOperationInfo,
   getOperations,
   getService,
@@ -47,6 +49,7 @@ import {
   updateApiSpecificationGroup,
   updateContextService,
   updateEnvironment,
+  updateMcpService,
   updateService,
   updateSpecificationModel,
 } from "./serviceApiModify";
@@ -64,6 +67,7 @@ import {
   handleReadSpecificationFileContent,
   QipFileType,
   getContextServiceUri,
+  getMcpServiceUri,
 } from "./serviceApiUtils";
 import {
   VSCodeMessage,
@@ -231,6 +235,18 @@ export async function getApiResponse(
         message.payload.service,
       );
 
+    // MCP service operations
+    case "getMcpServices":
+      return await getMcpServices(fileUri);
+    case "getMcpService":
+      return await getMcpService(fileUri, message.payload.id);
+    case "updateMcpService":
+      return await updateMcpService(
+        fileUri,
+        message.payload.id,
+        message.payload.request,
+      );
+
     // Service operations
     case "getService":
       return await getService(fileUri, message.payload);
@@ -361,6 +377,8 @@ export async function getNavigateUri(fileUri: vscode.Uri): Promise<string> {
     switch (fileType) {
       case QipFileType.CONTEXT_SERVICE:
         return await getContextServiceUri(fileUri);
+      case QipFileType.MCP_SERVICE:
+        return await getMcpServiceUri(fileUri);
       case QipFileType.SERVICE:
         return await getServiceUri(fileUri);
       case QipFileType.CHAIN:
@@ -386,6 +404,10 @@ export const SERVICE_ROUTES: RegExp[] = [
 
 export const CONTEXT_SERVICE_ROUTES: RegExp[] = [
   /^\/services\/context\/[^/]+\/parameters$/,
+];
+
+export const MCP_SERVICE_ROUTES: RegExp[] = [
+  /^\/services\/mcp\/[^/]+\/parameters$/,
 ];
 
 export const CHAIN_ROUTES: RegExp[] = [/^\/chains\/[^/]+(?:\/.*)?$/];
