@@ -450,10 +450,16 @@ async function getDefaultElementByType(
   chainId: string,
   elementRequest: CreateElementRequest,
 ): Promise<ElementSchema> {
+  return getDefaultElement(chainId, elementRequest.type as unknown as string, elementRequest.parentElementId);
+}
+
+async function getDefaultElement(
+  chainId: string,
+  type: string,
+  parentId?: string,
+): Promise<ElementSchema> {
   const elementId = crypto.randomUUID();
-  const libraryData = await getLibraryElementByType(
-    elementRequest.type as unknown as string,
-  );
+  const libraryData = await getLibraryElementByType(type);
 
   let children: ElementSchema[] | undefined = undefined;
   if (
@@ -477,15 +483,12 @@ async function getDefaultElementByType(
     mandatoryChecksPassed: false,
     name: libraryData.title,
     properties: await getDefaultPropertiesForElement(libraryData.properties),
-    type: elementRequest.type as unknown as DataType,
+    type: type as unknown as DataType,
     children: children,
-    parentElementId: elementRequest.parentElementId,
+    parentElementId: parentId,
   };
 
-  if (
-    elementRequest.type === "checkpoint" ||
-    elementRequest.type === "chain-trigger-2"
-  ) {
+  if (type === "checkpoint" || type === "chain-trigger-2") {
     replaceElementPlaceholders(element.properties, chainId, elementId);
   }
 
@@ -536,29 +539,51 @@ async function createSwimlane(
   elementRequest: CreateElementRequest,
 ): Promise<ActionDifference> {
   const libraryData = await getLibraryElementByType(SWIMLANE_TYPE_NAME);
-  const chainDiff: ActionDifference = {};
+  const chainDiff: ActionDifference = {createdElements: [], updatedElements: []};
   if (chain.defaultSwimlaneId) {
     return {};
   } else {
+    const chainElements = chain.content.elements as ElementSchema[];
+
     const defaultSwimlane: ElementSchema = await getDefaultElementByType(
       chain.id,
       elementRequest,
     );
-    const chainElements = chain.content.elements as ElementSchema[];
+    defaultSwimlane.name = DEFAULT_SWIMLANE_NAME;
     chainElements.push(defaultSwimlane);
+    chain.content.defaultSwimlaneId = defaultSwimlane.id;
+    chainDiff.createdDefaultSwimlaneId = defaultSwimlane.id;
 
-    chain.defaultSwimlaneId = defaultSwimlane.id;
-
-    const updatedElements = await updateSwimlaneForElements(defaultSwimlane, chain, (element: ElementSchema) =>
+    const updatedElements = await updateSwimlaneForElements(defaultSwimlane, chainElements, (element: ElementSchema) =>
       String(element.type) !== "reuse"
     );
-    defaultSwimlane.children = updatedElements;
+
+    chainDiff.createdElements?.push(await parseElement(mainFolderUri, defaultSwimlane, chain.id));
+    chainDiff.updatedElements?.push(...(await parseElements(mainFolderUri, updatedElements, chain.id)));
+
+    const chainHasReuseElements = chainElements.some(element => String(element.type) === "reuse");
+    if (chainHasReuseElements) {
+      const reuseSwimlane: ElementSchema = await getDefaultElementByType(
+        chain.id,
+        elementRequest,
+      );
+      reuseSwimlane.name = REUSE_SWIMLANE_NAME;
+      (reuseSwimlane as any).properties.color = "Green";
+      chainElements.push(reuseSwimlane);
+      chain.content.reuseSwimlaneId = reuseSwimlane.id;
+      chainDiff.createdReuseSwimlaneId = reuseSwimlane.id;
+
+      const updatedReuseElements = await updateSwimlaneForElements(
+        reuseSwimlane,
+        chainElements,
+        (element: ElementSchema) => String(element.type) === "reuse",
+      );
+
+      chainDiff.createdElements?.push(await parseElement(mainFolderUri, reuseSwimlane, chain.id));
+      chainDiff.updatedElements?.push(...(await parseElements(mainFolderUri, updatedReuseElements, chain.id)));
+    }
 
     await fileApi.writeMainChain(mainFolderUri, chain);
-
-    chainDiff.createdDefaultSwimlaneId = defaultSwimlane.id;
-    chainDiff.createdElements = [await parseElement(mainFolderUri, defaultSwimlane, chain.id)];
-    chainDiff.updatedElements = await parseElements(mainFolderUri, updatedElements, chain.id);
 
     return chainDiff;
   }
@@ -566,22 +591,29 @@ async function createSwimlane(
 
 async function updateSwimlaneForElements(
   swimlaneElement: ElementSchema,
-  chain: ChainSchema,
+  chainElements: ElementSchema[],
   predicate: (element: ElementSchema) => boolean,
 ): Promise<ElementSchema[]> {
-  const elements = chain.content.elements as ElementSchema[];
-  const nonSwimlaneElements = elements.filter(
+  const nonSwimlaneElements = chainElements.filter(
     (element) => SWIMLANE_TYPE_NAME !== String(element.type),
   );
   const updatedElements: ElementSchema[] = [];
   for (const element of nonSwimlaneElements) {
     if (predicate(element)) {
-      const updatedElement = findAndRemoveElementById(elements, element.id)!;
-      updatedElement.swimlaneId = swimlaneElement.id;
-      updatedElements.push(updatedElement);
+      updateSwimlaneId(element, swimlaneElement.id);
+      updatedElements.push(element);
     }
   }
   return updatedElements;
+}
+
+function updateSwimlaneId(element: ElementSchema, swimlaneId: string) {
+  element.swimlaneId = swimlaneId;
+  for (const child of getElementChildren(
+    element.children as ElementSchema[],
+  )) {
+    updateSwimlaneId(child, swimlaneId);
+  }
 }
 
 function insertElement(
