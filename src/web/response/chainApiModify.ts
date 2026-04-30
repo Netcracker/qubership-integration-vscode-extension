@@ -16,9 +16,12 @@ import {
   getChain,
   getDependencyId,
   getElement,
+  getElements,
   getLibraryElementByType,
   getMainChain,
   getMaskedField,
+  parseElement,
+  parseElements,
   parseMaskedField,
 } from "./chainApiRead";
 import {
@@ -33,7 +36,9 @@ import {
 } from "./chainApiUtils";
 import { Uri } from "vscode";
 import { fileApi } from "./file";
-import { Element as ElementSchema, DataType } from "@netcracker/qip-schemas";
+import { Element as ElementSchema, DataType, Chain as ChainSchema } from "@netcracker/qip-schemas";
+import { name } from "tar/types";
+import { defineArguments } from "graphql/type/definition";
 
 export async function updateChain(
   fileUri: Uri,
@@ -498,6 +503,9 @@ export async function createElement(
     throw Error("ChainId mismatch");
   }
 
+  if (elementRequest.type === SWIMLANE_TYPE_NAME) {
+    return await createSwimlane(mainFolderUri, chain, elementRequest);
+  }
   const element = await getDefaultElementByType(chainId, elementRequest);
 
   if (!chain.content.elements) {
@@ -516,6 +524,64 @@ export async function createElement(
   return {
     createdElements: [await getElement(mainFolderUri, chainId, element.id)],
   };
+}
+
+const SWIMLANE_TYPE_NAME = "swimlane";
+const DEFAULT_SWIMLANE_NAME = "Default swimlane";
+const REUSE_SWIMLANE_NAME = "Reuse swimlane";
+
+async function createSwimlane(
+  mainFolderUri: Uri,
+  chain: ChainSchema,
+  elementRequest: CreateElementRequest,
+): Promise<ActionDifference> {
+  const libraryData = await getLibraryElementByType(SWIMLANE_TYPE_NAME);
+  const chainDiff: ActionDifference = {};
+  if (chain.defaultSwimlaneId) {
+    return {};
+  } else {
+    const defaultSwimlane: ElementSchema = await getDefaultElementByType(
+      chain.id,
+      elementRequest,
+    );
+    const chainElements = chain.content.elements as ElementSchema[];
+    chainElements.push(defaultSwimlane);
+
+    chain.defaultSwimlaneId = defaultSwimlane.id;
+
+    const updatedElements = await updateSwimlaneForElements(defaultSwimlane, chain, (element: ElementSchema) =>
+      String(element.type) !== "reuse"
+    );
+    defaultSwimlane.children = updatedElements;
+
+    await fileApi.writeMainChain(mainFolderUri, chain);
+
+    chainDiff.createdDefaultSwimlaneId = defaultSwimlane.id;
+    chainDiff.createdElements = [await parseElement(mainFolderUri, defaultSwimlane, chain.id)];
+    chainDiff.updatedElements = await parseElements(mainFolderUri, updatedElements, chain.id);
+
+    return chainDiff;
+  }
+}
+
+async function updateSwimlaneForElements(
+  swimlaneElement: ElementSchema,
+  chain: ChainSchema,
+  predicate: (element: ElementSchema) => boolean,
+): Promise<ElementSchema[]> {
+  const elements = chain.content.elements as ElementSchema[];
+  const nonSwimlaneElements = elements.filter(
+    (element) => SWIMLANE_TYPE_NAME !== String(element.type),
+  );
+  const updatedElements: ElementSchema[] = [];
+  for (const element of nonSwimlaneElements) {
+    if (predicate(element)) {
+      const updatedElement = findAndRemoveElementById(elements, element.id)!;
+      updatedElement.swimlaneId = swimlaneElement.id;
+      updatedElements.push(updatedElement);
+    }
+  }
+  return updatedElements;
 }
 
 function insertElement(

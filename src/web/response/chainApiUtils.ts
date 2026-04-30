@@ -55,6 +55,38 @@ export function findElementById(
   return undefined;
 }
 
+export function findElement(
+  elements: ElementSchema[] | undefined,
+  condition: (element: ElementSchema) => boolean,
+  parentId: string | undefined = undefined,
+):
+  | {
+      element: ElementSchema;
+      parentId: string | undefined;
+    }
+  | undefined {
+  if (!elements) {
+    return undefined;
+  }
+
+  for (const element of elements) {
+    if (condition(element)) {
+      return { element, parentId };
+    }
+
+    const found = findElement(
+      element.children as ElementSchema[],
+      condition,
+      element.id,
+    );
+    if (found) {
+      return found;
+    }
+  }
+
+  return undefined;
+}
+
 export function getElementChildren(
   children: ElementSchema[] | undefined,
 ): ElementSchema[] {

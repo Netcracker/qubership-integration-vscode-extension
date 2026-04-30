@@ -249,7 +249,7 @@ function parseDependencies(dependencies: any[]): Dependency[] {
   return result;
 }
 
-async function parseElement(
+export async function parseElement(
   fileUri: Uri,
   element: ElementSchema,
   chainId: string,
@@ -334,7 +334,7 @@ async function parseElement(
   } as Element;
 }
 
-async function parseElements(
+export async function parseElements(
   fileUri: Uri,
   elements: ElementSchema[],
   chainId: string,
