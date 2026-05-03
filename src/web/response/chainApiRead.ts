@@ -331,6 +331,7 @@ export async function parseElement(
     description: element.description,
     parentElementId: parentId,
     children: children,
+    swimlaneId: element.swimlaneId,
   } as Element;
 }
 

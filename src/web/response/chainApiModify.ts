@@ -538,13 +538,18 @@ async function createSwimlane(
   chain: ChainSchema,
   elementRequest: CreateElementRequest,
 ): Promise<ActionDifference> {
-  const libraryData = await getLibraryElementByType(SWIMLANE_TYPE_NAME);
+  //const libraryData = await getLibraryElementByType(SWIMLANE_TYPE_NAME);
   const chainDiff: ActionDifference = {createdElements: [], updatedElements: []};
-  if (chain.defaultSwimlaneId) {
-    return {};
-  } else {
-    const chainElements = chain.content.elements as ElementSchema[];
+  const chainElements = chain.content.elements as ElementSchema[];
 
+  if (chain.content.defaultSwimlaneId) {
+    const swimlane: ElementSchema = await getDefaultElementByType(
+      chain.id,
+      elementRequest,
+    );
+    chainElements.push(swimlane);
+    chainDiff.createdElements?.push(await parseElement(mainFolderUri, swimlane, chain.id));
+  } else {
     const defaultSwimlane: ElementSchema = await getDefaultElementByType(
       chain.id,
       elementRequest,
@@ -582,11 +587,10 @@ async function createSwimlane(
       chainDiff.createdElements?.push(await parseElement(mainFolderUri, reuseSwimlane, chain.id));
       chainDiff.updatedElements?.push(...(await parseElements(mainFolderUri, updatedReuseElements, chain.id)));
     }
-
-    await fileApi.writeMainChain(mainFolderUri, chain);
-
-    return chainDiff;
   }
+  await fileApi.writeMainChain(mainFolderUri, chain);
+
+  return chainDiff;
 }
 
 async function updateSwimlaneForElements(
