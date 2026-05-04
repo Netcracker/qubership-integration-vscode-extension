@@ -16,7 +16,6 @@ import {
   getChain,
   getDependencyId,
   getElement,
-  getElements,
   getLibraryElementByType,
   getMainChain,
   getMaskedField,
@@ -37,8 +36,7 @@ import {
 import { Uri } from "vscode";
 import { fileApi } from "./file";
 import { Element as ElementSchema, DataType, Chain as ChainSchema } from "@netcracker/qip-schemas";
-import { name } from "tar/types";
-import { defineArguments } from "graphql/type/definition";
+import { deleteSwimlane, updateSwimlaneForElements } from "./swimlaneUtils";
 
 export async function updateChain(
   fileUri: Uri,
@@ -593,33 +591,6 @@ async function createSwimlane(
   return chainDiff;
 }
 
-async function updateSwimlaneForElements(
-  swimlaneElement: ElementSchema,
-  chainElements: ElementSchema[],
-  predicate: (element: ElementSchema) => boolean,
-): Promise<ElementSchema[]> {
-  const nonSwimlaneElements = chainElements.filter(
-    (element) => SWIMLANE_TYPE_NAME !== String(element.type),
-  );
-  const updatedElements: ElementSchema[] = [];
-  for (const element of nonSwimlaneElements) {
-    if (predicate(element)) {
-      updateSwimlaneId(element, swimlaneElement.id);
-      updatedElements.push(element);
-    }
-  }
-  return updatedElements;
-}
-
-function updateSwimlaneId(element: ElementSchema, swimlaneId: string) {
-  element.swimlaneId = swimlaneId;
-  for (const child of getElementChildren(
-    element.children as ElementSchema[],
-  )) {
-    updateSwimlaneId(child, swimlaneId);
-  }
-}
-
 function insertElement(
   elements: ElementSchema[],
   newElement: ElementSchema,
@@ -682,7 +653,7 @@ function getDefaultTypedProperties(
   return result;
 }
 
-function findAndRemoveElementById(
+export function findAndRemoveElementById(
   elements: ElementSchema[] | undefined,
   elementId: string,
 ): ElementSchema | undefined {
@@ -758,15 +729,20 @@ export async function deleteElements(
   const removedElements: any[] = [];
   const chainElements = chain.content.elements as ElementSchema[];
   for (const elementId of elementIds) {
-    const parentElementId = findElementById(chainElements, elementId)?.parentId;
-    const element = findAndRemoveElementById(chainElements, elementId);
+    const findElementResult = findElementById(chainElements, elementId);
+    const parentElementId = findElementResult?.parentId;
+    const element = findElementResult?.element;
+
     if (!element) {
       console.error(`ElementId not found`);
       throw Error("ElementId not found");
+    } else if (SWIMLANE_TYPE_NAME !== String(element.type)) {
+      deleteSwimlane(fileUri, element, chain);
     }
+    const removedElement = findAndRemoveElementById(chainElements, elementId)!;
 
     for (const childElement of getElementChildren(
-      element.children as ElementSchema[],
+      removedElement.children as ElementSchema[],
     )) {
       await deleteDependenciesForElement(
         childElement.id,
@@ -779,7 +755,7 @@ export async function deleteElements(
       elementId,
       chain.content.dependencies as Dependency[],
     ); // TODO change to dependency schema
-    removedElements.push(element);
+    removedElements.push(removedElement);
 
     const parentElement = parentElementId
       ? findElementById(chainElements, parentElementId)?.element
