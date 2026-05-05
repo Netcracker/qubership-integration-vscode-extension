@@ -557,7 +557,7 @@ async function createSwimlane(
     chain.content.defaultSwimlaneId = defaultSwimlane.id;
     chainDiff.createdDefaultSwimlaneId = defaultSwimlane.id;
 
-    const updatedElements = await updateSwimlaneForElements(defaultSwimlane, chainElements, (element: ElementSchema) =>
+    const updatedElements = await updateSwimlaneForElements(defaultSwimlane.id, chainElements, (element: ElementSchema) =>
       String(element.type) !== "reuse"
     );
 
@@ -577,7 +577,7 @@ async function createSwimlane(
       chainDiff.createdReuseSwimlaneId = reuseSwimlane.id;
 
       const updatedReuseElements = await updateSwimlaneForElements(
-        reuseSwimlane,
+        reuseSwimlane.id,
         chainElements,
         (element: ElementSchema) => String(element.type) === "reuse",
       );

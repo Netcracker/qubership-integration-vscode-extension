@@ -1,6 +1,5 @@
 import {
   Element as ElementSchema,
-  DataType,
   Chain as ChainSchema,
 } from "@netcracker/qip-schemas";
 import { ActionDifference } from "@netcracker/qip-ui";
@@ -21,7 +20,7 @@ export function isReuseSwimlane(element: ElementSchema, chain: ChainSchema) {
 
 export async function deleteSwimlane(
   fileUri: Uri,
-  element: ElementSchema,
+  swimlaneElement: ElementSchema,
   chain: ChainSchema,
 ): Promise<ActionDifference> {
   const chainDiff: ActionDifference = {
@@ -29,9 +28,34 @@ export async function deleteSwimlane(
     updatedElements: [],
   };
 
-  if (isDefaultSwimlane(element, chain)) {
+  if (isDefaultSwimlane(swimlaneElement, chain)) {
     deleteDefaultSwimlane(fileUri, chain, chainDiff);
-  } else if (isReuseSwimlane(element, chain)) {
+  } else if (isReuseSwimlane(swimlaneElement, chain)) {
+    const elementsInReuseSwimlane = (
+      chain.content.elements as ElementSchema[]
+    ).filter(
+      (chainElement) => chainElement.swimlaneId === swimlaneElement.id,
+    ).length;
+
+    if (elementsInReuseSwimlane === 0) {
+      deleteOnlySwimlane(fileUri, chain, swimlaneElement.id, chainDiff);
+    } else {
+      deleteDefaultSwimlane(fileUri, chain, chainDiff);
+    }
+  } else {
+    if (chain.content.defaultSwimlaneId) {
+      const updatedElements = await updateSwimlaneForElements(
+        chain.content.defaultSwimlaneId as string,
+        chain.content.elements as ElementSchema[],
+        (element) => element.swimlaneId === swimlaneElement.id,
+      );
+      chainDiff.updatedElements?.push(
+        ...(await parseElements(fileUri, updatedElements, chain.id)),
+      );
+      deleteOnlySwimlane(fileUri, chain, swimlaneElement.id, chainDiff);
+    } else {
+      deleteSwimlaneWithElements(fileUri, chain, swimlaneElement.id, chainDiff);
+    }
   }
 
   return chainDiff;
@@ -78,6 +102,24 @@ async function deleteSwimlaneWithElements(
   swimlaneId: string,
   chainDiff: ActionDifference,
 ) {
+  deleteOnlySwimlane(fileUri, chain, swimlaneId, chainDiff);
+
+  const updatedElements = await updateSwimlaneForElements(
+    undefined,
+    chain.content.elements as ElementSchema[],
+    (element) => element.swimlaneId === swimlaneId,
+  );
+  chainDiff.updatedElements?.push(
+    ...(await parseElements(fileUri, updatedElements, chain.id)),
+  );
+}
+
+async function deleteOnlySwimlane(
+  fileUri: Uri,
+  chain: ChainSchema,
+  swimlaneId: string,
+  chainDiff: ActionDifference,
+) {
   const chainElements = chain.content.elements as ElementSchema[];
 
   const deletedSwimlane = findAndRemoveElementById(chainElements, swimlaneId)!;
@@ -91,19 +133,10 @@ async function deleteSwimlaneWithElements(
   chainDiff.removedElements?.push(
     await parseElement(fileUri, deletedSwimlane, chain.id),
   );
-
-  const updatedElements = await updateSwimlaneForElements(
-    undefined,
-    chainElements,
-    (element) => element.swimlaneId === swimlaneId,
-  );
-  chainDiff.updatedElements?.push(
-    ...(await parseElements(fileUri, updatedElements, chain.id)),
-  );
 }
 
 export async function updateSwimlaneForElements(
-  swimlaneElement: ElementSchema | undefined,
+  swimlaneId: string | undefined,
   chainElements: ElementSchema[],
   predicate: (element: ElementSchema) => boolean,
 ): Promise<ElementSchema[]> {
@@ -113,7 +146,7 @@ export async function updateSwimlaneForElements(
   const updatedElements: ElementSchema[] = [];
   for (const element of nonSwimlaneElements) {
     if (predicate(element)) {
-      updateSwimlaneId(element, swimlaneElement?.id);
+      updateSwimlaneId(element, swimlaneId);
       updatedElements.push(element);
     }
   }
