@@ -36,7 +36,7 @@ import {
 import { Uri } from "vscode";
 import { fileApi } from "./file";
 import { Element as ElementSchema, DataType, Chain as ChainSchema } from "@netcracker/qip-schemas";
-import { deleteSwimlane, updateSwimlaneForElements } from "./swimlaneUtils";
+import { createReuseSwimlaneAndUpdateElements, deleteSwimlane, enrichElementWithSwimlaneId, updateSwimlaneForElements } from "./swimlaneUtils";
 
 export async function updateChain(
   fileUri: Uri,
@@ -451,7 +451,7 @@ async function getDefaultElementByType(
   return getDefaultElement(chainId, elementRequest.type as unknown as string, elementRequest.parentElementId);
 }
 
-async function getDefaultElement(
+export async function getDefaultElement(
   chainId: string,
   type: string,
   parentId?: string,
@@ -513,7 +513,17 @@ export async function createElement(
     chain.content.elements = [];
   }
   const chainElements = chain.content.elements as ElementSchema[];
-  if (!insertElement(chainElements, element)) {
+  const chainDiff: ActionDifference = {createdElements: [], updatedElements: []};
+  if (
+    !(await insertElement(
+      mainFolderUri,
+      chain,
+      chainElements,
+      element,
+      chainDiff,
+      elementRequest,
+    ))
+  ) {
     chainElements.push(element);
   }
 
@@ -522,21 +532,18 @@ export async function createElement(
   await writeElementProperties(mainFolderUri, element);
   await fileApi.writeMainChain(mainFolderUri, chain);
 
-  return {
-    createdElements: [await getElement(mainFolderUri, chainId, element.id)],
-  };
+  chainDiff.createdElements?.push(await getElement(mainFolderUri, chainId, element.id));
+  return chainDiff;
 }
 
 const SWIMLANE_TYPE_NAME = "swimlane";
 const DEFAULT_SWIMLANE_NAME = "Default swimlane";
-const REUSE_SWIMLANE_NAME = "Reuse swimlane";
 
 async function createSwimlane(
   mainFolderUri: Uri,
   chain: ChainSchema,
   elementRequest: CreateElementRequest,
 ): Promise<ActionDifference> {
-  //const libraryData = await getLibraryElementByType(SWIMLANE_TYPE_NAME);
   const chainDiff: ActionDifference = {createdElements: [], updatedElements: []};
   const chainElements = chain.content.elements as ElementSchema[];
 
@@ -566,24 +573,7 @@ async function createSwimlane(
 
     const chainHasReuseElements = chainElements.some(element => String(element.type) === "reuse");
     if (chainHasReuseElements) {
-      const reuseSwimlane: ElementSchema = await getDefaultElementByType(
-        chain.id,
-        elementRequest,
-      );
-      reuseSwimlane.name = REUSE_SWIMLANE_NAME;
-      (reuseSwimlane as any).properties.color = "Green";
-      chainElements.push(reuseSwimlane);
-      chain.content.reuseSwimlaneId = reuseSwimlane.id;
-      chainDiff.createdReuseSwimlaneId = reuseSwimlane.id;
-
-      const updatedReuseElements = await updateSwimlaneForElements(
-        reuseSwimlane.id,
-        chainElements,
-        (element: ElementSchema) => String(element.type) === "reuse",
-      );
-
-      chainDiff.createdElements?.push(await parseElement(mainFolderUri, reuseSwimlane, chain.id));
-      chainDiff.updatedElements?.push(...(await parseElements(mainFolderUri, updatedReuseElements, chain.id)));
+      await createReuseSwimlaneAndUpdateElements(mainFolderUri, chain, chainDiff);
     }
   }
   await fileApi.writeMainChain(mainFolderUri, chain);
@@ -591,12 +581,23 @@ async function createSwimlane(
   return chainDiff;
 }
 
-function insertElement(
+async function insertElement(
+  fileUri: Uri,
+  chain: ChainSchema,
   elements: ElementSchema[],
   newElement: ElementSchema,
-): boolean {
+  chainDiff: ActionDifference,
+  elementRequest: CreateElementRequest,
+): Promise<boolean> {
   if (!newElement.parentElementId) {
-    // no parent, add to root
+    await enrichElementWithSwimlaneId(
+      fileUri,
+      chain,
+      elementRequest,
+      newElement,
+      chainDiff,
+    );
+
     elements.push(newElement);
     return true;
   }
@@ -606,13 +607,24 @@ function insertElement(
       if (!element.children) {
         element.children = [];
       }
+      newElement.swimlaneId = element.swimlaneId;
       (element.children as ElementSchema[]).push(newElement);
+      chainDiff.updatedElements?.push(
+        await parseElement(fileUri, element, chain.id),
+      );
       return true;
     }
 
     if (
       element.children &&
-      insertElement(element.children as ElementSchema[], newElement)
+      (await insertElement(
+        fileUri,
+        chain,
+        element.children as ElementSchema[],
+        newElement,
+        chainDiff,
+        elementRequest,
+      ))
     ) {
       return true; // inserted in nested children
     }

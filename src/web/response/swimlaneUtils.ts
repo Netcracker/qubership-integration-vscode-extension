@@ -2,13 +2,14 @@ import {
   Element as ElementSchema,
   Chain as ChainSchema,
 } from "@netcracker/qip-schemas";
-import { ActionDifference } from "@netcracker/qip-ui";
-import { findAndRemoveElementById } from "./chainApiModify";
+import { ActionDifference, CreateElementRequest } from "@netcracker/qip-ui";
+import { findAndRemoveElementById, getDefaultElement } from "./chainApiModify";
 import { getElementChildren } from "./chainApiUtils";
 import { Uri } from "vscode";
 import { parseElement, parseElements } from "./chainApiRead";
 
 const SWIMLANE_TYPE_NAME = "swimlane";
+const REUSE_SWIMLANE_NAME = "Reuse swimlane";
 
 export function isDefaultSwimlane(element: ElementSchema, chain: ChainSchema) {
   return element.id === chain.content.defaultSwimlaneId;
@@ -16,6 +17,98 @@ export function isDefaultSwimlane(element: ElementSchema, chain: ChainSchema) {
 
 export function isReuseSwimlane(element: ElementSchema, chain: ChainSchema) {
   return element.id === chain.content.reuseSwimlaneId;
+}
+
+export async function enrichElementWithSwimlaneId(
+  fileUri: Uri,
+  chain: ChainSchema,
+  elementRequest: CreateElementRequest,
+  newElement: ElementSchema,
+  chainDiff: ActionDifference,
+): Promise<void> {
+  const chainElements = chain.content.elements as ElementSchema[];
+
+  let swimlaneId = chain.content.defaultSwimlaneId as string;
+  if (swimlaneId) {
+    if (String(newElement.type) === "reuse") {
+      if (!chain.content.reuseSwimlaneId) {
+        swimlaneId = (await createReuseSwimlane(fileUri, chain, chainDiff)).id;
+      }
+    } else if (elementRequest.swimlaneId) {
+      swimlaneId = findSwimlaneByIdOrError(
+        chainElements,
+        elementRequest.swimlaneId,
+        chain.id,
+      ).id;
+    }
+  }
+  if (swimlaneId) {
+    newElement.swimlaneId = swimlaneId;
+  }
+}
+
+export function findSwimlaneByIdOrError(
+  elements: ElementSchema[],
+  swimlaneId: string,
+  chainId: string,
+): ElementSchema {
+  const swimlane = elements.find(
+    (element) =>
+      String(element.type) === SWIMLANE_TYPE_NAME && element.id === swimlaneId,
+  );
+  if (!swimlane) {
+    throw new Error(
+      `Swimlane ${swimlaneId} does not exist in chain ${chainId}`,
+    );
+  }
+
+  return swimlane;
+}
+
+export async function createReuseSwimlane(
+  fileUri: Uri,
+  chain: ChainSchema,
+  chainDiff: ActionDifference,
+): Promise<ElementSchema> {
+  const chainElements = chain.content.elements as ElementSchema[];
+
+  const reuseSwimlane: ElementSchema = await getDefaultElement(
+    chain.id,
+    SWIMLANE_TYPE_NAME,
+  );
+  reuseSwimlane.name = REUSE_SWIMLANE_NAME;
+  (reuseSwimlane as any).properties.color = "Green";
+  chainElements.push(reuseSwimlane);
+  chain.content.reuseSwimlaneId = reuseSwimlane.id;
+  chainDiff.createdReuseSwimlaneId = reuseSwimlane.id;
+
+  chainDiff.createdElements?.push(
+    await parseElement(fileUri, reuseSwimlane, chain.id),
+  );
+
+  return reuseSwimlane;
+}
+
+export async function createReuseSwimlaneAndUpdateElements(
+  fileUri: Uri,
+  chain: ChainSchema,
+  chainDiff: ActionDifference,
+) {
+  const reuseSwimlane: ElementSchema = await createReuseSwimlane(
+    fileUri,
+    chain,
+    chainDiff,
+  );
+
+  const updatedReuseElements = await updateSwimlaneForElements(
+    reuseSwimlane.id,
+    chain.content.elements as ElementSchema[],
+    (element: ElementSchema) => String(element.type) === "reuse",
+  );
+
+  chainDiff.updatedElements?.push(
+    ...(await parseElements(fileUri, updatedReuseElements, chain.id)),
+  );
 }
 
 export async function deleteSwimlane(
